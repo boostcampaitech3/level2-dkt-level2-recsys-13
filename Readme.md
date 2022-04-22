@@ -48,7 +48,7 @@ pip install -r requirements.txt
 
 #### 👉 커밋 메시지 
   - 커밋 메세지는 제목(첫 줄), 본문(제목으로부터 한 칸 띄어서 작성)으로 구성됩니다.
-  - 커밋 메시지의 첫 문자는 소문자로 통일하며, `:`는 붙이지 않습니다. (ex. feat lightGCN)
+  - 커밋 메시지의 첫 문자는 소문자로 통일하며, `:`을 표시합니다. 이때, `:` 뒤에만 띄어쓰기를 붙여줍니다. (ex. feat: lightGCN)
   - 커밋 컨벤션은 다음 표를 따릅니다.   
      <img width="442" alt="image" src="https://user-images.githubusercontent.com/83912849/164678287-5454603e-c8bf-4aaf-9e38-d65822dbf034.png">
  
