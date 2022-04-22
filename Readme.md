@@ -1,5 +1,5 @@
-# Movie Recommendation
-## Movie Recommendation Baseline Code
+#  Deep Knowledge Tracing
+##  Deep Knowledge Tracing Baseline Code
 
 ### Installation
 
@@ -9,20 +9,11 @@ pip install -r requirements.txt
 
 ### How to run
 
-1. Pretraining
+1. training
    ```
-   python run_pretrain.py
+   python train.py
    ```
-2. Fine Tuning (Main Training)
-   1. with pretrained weight
-      ```
-      python run_train.py --using_pretrain
-      ```
-   2. without pretrained weight
-      ```
-      python run_train.py
-      ```
-3. Inference
+2. Inference
    ```
    python inference.py
    ```
