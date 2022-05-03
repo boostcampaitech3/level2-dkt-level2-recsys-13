@@ -30,7 +30,7 @@ class LSTM(nn.Module):
         self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4, self.hidden_dim)
 
         self.lstm = nn.LSTM(
-            self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
+            self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True, dropout=args.drop_out
         )
 
         # Fully connected layer

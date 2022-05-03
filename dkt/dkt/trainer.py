@@ -1,5 +1,6 @@
 import math
 import os
+import gc
 
 import numpy as np
 import torch
@@ -11,15 +12,22 @@ from .metric import get_metric
 from .model import LSTM, LSTMATTN, Bert
 from .optimizer import get_optimizer
 from .scheduler import get_scheduler
-
+from .augmenter import data_augmentation
 
 def run(args, train_data, valid_data):
-    train_loader, valid_loader = get_loaders(args, train_data, valid_data)
+    # 캐시 메모리 비우기 및 가비지 컬렉터 가동!
+    torch.cuda.empty_cache()
+    gc.collect()
 
+    # augmentation
+    augmented_train_data = data_augmentation(train_data, args)
+    if len(augmented_train_data) != len(train_data):
+        print(f"Data Augmentation applied. Train data {len(train_data)} -> {len(augmented_train_data)}\n")
+
+    train_loader, valid_loader = get_loaders(args, augmented_train_data, valid_data)
+    
     # only when using warmup scheduler
-    args.total_steps = int(math.ceil(len(train_loader.dataset) / args.batch_size)) * (
-        args.n_epochs
-    )
+    args.total_steps = int(len(train_loader.dataset) / args.batch_size) * (args.n_epochs)
     args.warmup_steps = args.total_steps // 10
 
     model = get_model(args)
@@ -256,7 +264,10 @@ def compute_loss(preds, targets):
 
 def update_params(loss, model, optimizer, scheduler, args):
     loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad)
+
+    if args.clip_grad:
+        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad)
+    
     if args.scheduler == "linear_warmup":
         scheduler.step()
     optimizer.step()
