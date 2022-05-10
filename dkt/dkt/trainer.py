@@ -71,10 +71,10 @@ def run(args, train_data, valid_data, kfold_idx = None):
                 delete_checkpoint(args.model_dir, model_to_save_filename)
             
             # 모델 파일명 세팅
-            model_to_save_filename = f"model_epoch{epoch + 1}_{best_auc:.2f}"
+            model_to_save_filename = f"model"
             if kfold_idx is not None: # kfold
                 model_to_save_filename += f"_kfold{kfold_idx}"
-            model_to_save_filename += ".pt"
+            model_to_save_filename += f"_epoch{epoch + 1}_{best_auc:.2f}.pt"
 
             save_checkpoint(
                 {
@@ -98,6 +98,7 @@ def run(args, train_data, valid_data, kfold_idx = None):
             scheduler.step(best_auc)
 
     return best_auc
+
 
 def train(train_loader, model, optimizer, scheduler, args):
     model.train()

@@ -4,7 +4,7 @@ import torch
 from args import parse_args
 from dkt import trainer
 from dkt.dataloader import Preprocess
-from dkt.ensemble import average_ensemble
+from dkt.ensemble import average_ensemble, weighted_ensemble
 
 
 def main(args):
@@ -16,16 +16,19 @@ def main(args):
     test_data = preprocess.get_test_data()
 
     model_paths = trainer.get_model_paths(args)
+    model_paths.sort(key = lambda x: float(x[-7:-3]))
 
     if args.cv == True:
         all_model_preds = []
+        weights = []
         for model_path in model_paths:
             model_preds = trainer.inference(args, test_data, model_path)
             all_model_preds.append(model_preds)
-        total_preds = average_ensemble(all_model_preds)
+            weights.append(float(model_path[-7:-3]))
+        
+        total_preds = weighted_ensemble(all_model_preds, weights)
         trainer.write_submission(args, total_preds)
     else:
-        model_paths.sort()
         model_path = model_paths[-1]
         total_preds =  trainer.inference(args, test_data, model_path)
         trainer.write_submission(args, total_preds)
