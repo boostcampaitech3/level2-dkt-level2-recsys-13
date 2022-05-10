@@ -74,6 +74,10 @@ def parse_args(mode="train"):
         "--scheduler", default="plateau", type=str, help="scheduler type"
     )
 
+    ### 추가 ###
+    parser.add_argument("--cv", default=False, type=bool, help="cross validation")
+    parser.add_argument("--wandb", default=False, type=bool, help="wandb option")
+
     args = parser.parse_args()
 
     return args
