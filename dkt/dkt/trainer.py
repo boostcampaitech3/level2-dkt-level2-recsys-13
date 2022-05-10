@@ -14,7 +14,7 @@ from .optimizer import get_optimizer
 from .scheduler import get_scheduler
 from .augmenter import data_augmentation
 
-def run(args, train_data, valid_data):
+def run(args, train_data, valid_data, kfold_idx = None):
     # 캐시 메모리 비우기 및 가비지 컬렉터 가동!
     torch.cuda.empty_cache()
     gc.collect()
@@ -34,6 +34,7 @@ def run(args, train_data, valid_data):
     optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(optimizer, args)
 
+    model_to_save_filename = None
     best_auc = -1
     early_stopping_counter = 0
     for epoch in range(args.n_epochs):
@@ -64,13 +65,24 @@ def run(args, train_data, valid_data):
             best_auc = auc
             # torch.nn.DataParallel로 감싸진 경우 원래의 model을 가져옵니다.
             model_to_save = model.module if hasattr(model, "module") else model
+
+            # 저장할 시 이전에 저장한 모델 삭제.
+            if model_to_save_filename is not None:
+                delete_checkpoint(args.model_dir, model_to_save_filename)
+            
+            # 모델 파일명 세팅
+            model_to_save_filename = f"model_epoch{epoch + 1}_{best_auc:.2f}"
+            if kfold_idx is not None: # kfold
+                model_to_save_filename += f"_kfold{kfold_idx}"
+            model_to_save_filename += ".pt"
+
             save_checkpoint(
                 {
                     "epoch": epoch + 1,
                     "state_dict": model_to_save.state_dict(),
                 },
                 args.model_dir,
-                "model.pt",
+                model_to_save_filename,
             )
             early_stopping_counter = 0
         else:
@@ -85,6 +97,7 @@ def run(args, train_data, valid_data):
         if args.scheduler == "plateau":
             scheduler.step(best_auc)
 
+    return best_auc
 
 def train(train_loader, model, optimizer, scheduler, args):
     model.train()
@@ -280,6 +293,12 @@ def save_checkpoint(state, model_dir, model_filename):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     torch.save(state, os.path.join(model_dir, model_filename))
+
+
+def delete_checkpoint(model_dir, model_filename):
+    print("deleting model ...")
+    if os.path.exists(model_dir):
+        os.remove(os.path.join(model_dir, model_filename))
 
 
 def load_model(args):
