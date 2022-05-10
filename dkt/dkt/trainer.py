@@ -177,9 +177,8 @@ def validate(valid_loader, model, args):
     return auc, acc
 
 
-def inference(args, test_data):
-
-    model = load_model(args)
+def inference(args, test_data, model_path=None):
+    model = load_model(args, model_path)
     model.eval()
     _, test_loader = get_loaders(args, None, test_data)
 
@@ -200,7 +199,11 @@ def inference(args, test_data):
 
         total_preds += list(preds)
 
-    write_path = os.path.join(args.output_dir, "submission.csv")
+    return total_preds
+
+
+def write_submission(args, total_preds, filename="submission.csv"):
+    write_path = os.path.join(args.output_dir, filename)
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     with open(write_path, "w", encoding="utf8") as w:
@@ -301,9 +304,19 @@ def delete_checkpoint(model_dir, model_filename):
         os.remove(os.path.join(model_dir, model_filename))
 
 
-def load_model(args):
+def get_model_paths(args):
+    model_paths = []
+    model_dir = args.model_dir
+    for file in os.listdir(model_dir):
+        if file.endswith(".pt"):
+            model_paths.append(os.path.join(model_dir, file))
 
-    model_path = os.path.join(args.model_dir, args.model_name)
+    return model_paths
+
+
+def load_model(args, model_path=None):
+    if model_path is None:
+        model_path = os.path.join(args.model_dir, args.model_name)
     print("Loading Model from:", model_path)
     load_state = torch.load(model_path)
     model = get_model(args)

@@ -24,7 +24,7 @@ def main(args):
     if args.cv == True:
         aucs = []
         kf = KFold(5, shuffle=False)
-        for k, tr_idx, val_idx in enumerate(kf.split(train_data)):
+        for k, (tr_idx, val_idx) in enumerate(kf.split(train_data)):
             tr_data, val_data = train_data[tr_idx], train_data[val_idx]
             aucs.append( trainer.run(args, tr_data, val_data, k) )
         print(sum(aucs)/len(aucs))
