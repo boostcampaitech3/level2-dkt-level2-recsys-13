@@ -12,6 +12,7 @@ from sklearn.model_selection import KFold
 def main(args):
     if args.wandb:
         wandb.login()
+        wandb.init(project="dkt", config=vars(args))
 
     setSeeds(42)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -24,14 +25,12 @@ def main(args):
     if args.cv == True:
         aucs = []
         kf = KFold(5, shuffle=False)
-        for tr_idx,val_idx in kf.split(range(len(train_data))):
+        for k, (tr_idx, val_idx) in enumerate(kf.split(train_data)):
             tr_data, val_data = train_data[tr_idx], train_data[val_idx]
-            aucs.append(trainer.run(args, tr_data, val_data))
+            aucs.append( trainer.run(args, tr_data, val_data, k) )
         print(sum(aucs)/len(aucs))
     else:
-        train_data, valid_data = preprocess.split_data(train_data)
-        if args.wandb:
-            wandb.init(project="dkt", config=vars(args))
+        train_data, valid_data = preprocess.split_data(train_data)     
         trainer.run(args, train_data, valid_data)
 
 

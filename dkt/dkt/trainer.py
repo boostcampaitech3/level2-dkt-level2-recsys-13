@@ -14,7 +14,7 @@ from .optimizer import get_optimizer
 from .scheduler import get_scheduler
 from .augmenter import data_augmentation
 
-def run(args, train_data, valid_data):
+def run(args, train_data, valid_data, kfold_idx = None):
     # 캐시 메모리 비우기 및 가비지 컬렉터 가동!
     torch.cuda.empty_cache()
     gc.collect()
@@ -34,6 +34,7 @@ def run(args, train_data, valid_data):
     optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(optimizer, args)
 
+    model_to_save_filename = None
     best_auc = -1
     early_stopping_counter = 0
     for epoch in range(args.n_epochs):
@@ -64,13 +65,24 @@ def run(args, train_data, valid_data):
             best_auc = auc
             # torch.nn.DataParallel로 감싸진 경우 원래의 model을 가져옵니다.
             model_to_save = model.module if hasattr(model, "module") else model
+
+            # 저장할 시 이전에 저장한 모델 삭제.
+            if model_to_save_filename is not None:
+                delete_checkpoint(args.model_dir, model_to_save_filename)
+            
+            # 모델 파일명 세팅
+            model_to_save_filename = f"model"
+            if kfold_idx is not None: # kfold
+                model_to_save_filename += f"_kfold{kfold_idx}"
+            model_to_save_filename += f"_epoch{epoch + 1}_{best_auc:.2f}.pt"
+
             save_checkpoint(
                 {
                     "epoch": epoch + 1,
                     "state_dict": model_to_save.state_dict(),
                 },
                 args.model_dir,
-                "model.pt",
+                model_to_save_filename,
             )
             early_stopping_counter = 0
         else:
@@ -84,6 +96,8 @@ def run(args, train_data, valid_data):
         # scheduler
         if args.scheduler == "plateau":
             scheduler.step(best_auc)
+
+    return best_auc
 
 
 def train(train_loader, model, optimizer, scheduler, args):
@@ -164,9 +178,8 @@ def validate(valid_loader, model, args):
     return auc, acc
 
 
-def inference(args, test_data):
-
-    model = load_model(args)
+def inference(args, test_data, model_path=None):
+    model = load_model(args, model_path)
     model.eval()
     _, test_loader = get_loaders(args, None, test_data)
 
@@ -187,7 +200,11 @@ def inference(args, test_data):
 
         total_preds += list(preds)
 
-    write_path = os.path.join(args.output_dir, "submission.csv")
+    return total_preds
+
+
+def write_submission(args, total_preds, filename="submission.csv"):
+    write_path = os.path.join(args.output_dir, filename)
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     with open(write_path, "w", encoding="utf8") as w:
@@ -282,9 +299,25 @@ def save_checkpoint(state, model_dir, model_filename):
     torch.save(state, os.path.join(model_dir, model_filename))
 
 
-def load_model(args):
+def delete_checkpoint(model_dir, model_filename):
+    print("deleting model ...")
+    if os.path.exists(model_dir):
+        os.remove(os.path.join(model_dir, model_filename))
 
-    model_path = os.path.join(args.model_dir, args.model_name)
+
+def get_model_paths(args):
+    model_paths = []
+    model_dir = args.model_dir
+    for file in os.listdir(model_dir):
+        if file.endswith(".pt"):
+            model_paths.append(os.path.join(model_dir, file))
+
+    return model_paths
+
+
+def load_model(args, model_path=None):
+    if model_path is None:
+        model_path = os.path.join(args.model_dir, args.model_name)
     print("Loading Model from:", model_path)
     load_state = torch.load(model_path)
     model = get_model(args)
