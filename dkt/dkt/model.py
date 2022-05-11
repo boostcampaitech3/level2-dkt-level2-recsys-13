@@ -17,7 +17,7 @@ class LSTM(nn.Module):
         self.hidden_dim = self.args.hidden_dim
         self.n_layers = self.args.n_layers
 
-        # Embedding
+        # Embedding 
         # interaction은 현재 correct로 구성되어있다. correct(1, 2) + padding(0)
         self.embedding_interaction = nn.Embedding(3, self.hidden_dim // 3)
         self.embedding_test = nn.Embedding(self.args.n_test + 1, self.hidden_dim // 3)
@@ -25,9 +25,9 @@ class LSTM(nn.Module):
             self.args.n_questions + 1, self.hidden_dim // 3
         )
         self.embedding_tag = nn.Embedding(self.args.n_tag + 1, self.hidden_dim // 3)
-
+        self.linear_cont = nn.Linear(5, self.hidden_dim)
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4, self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim // 3)*4 + self.hidden_dim, self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
@@ -49,7 +49,7 @@ class LSTM(nn.Module):
 
     def forward(self, input):
 
-        test, question, tag, _, mask, interaction = input
+        test, question, tag, _, Tagrate, answerrate, elapsed, cumAnswerRate, Timestamp, mask, interaction = input
 
         batch_size = interaction.size(0)
 
@@ -60,12 +60,23 @@ class LSTM(nn.Module):
         embed_question = self.embedding_question(question)
         embed_tag = self.embedding_tag(tag)
 
+        Tagrate = Tagrate.unsqueeze(2)
+        answerrate = answerrate.unsqueeze(2)
+        elapsed = elapsed.unsqueeze(2)
+        cumAnswerRate = cumAnswerRate.unsqueeze(2)
+        Timestamp = Timestamp.unsqueeze(2)
+        
+        embed_cont = self.linear_cont(torch.cat([Tagrate, answerrate, elapsed, cumAnswerRate, Timestamp], 2))
+        
+        
+
         embed = torch.cat(
             [
                 embed_interaction,
                 embed_test,
                 embed_question,
                 embed_tag,
+                embed_cont,
             ],
             2,
         )
