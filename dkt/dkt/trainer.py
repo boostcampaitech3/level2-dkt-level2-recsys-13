@@ -232,7 +232,7 @@ def get_model(args):
 # 배치 전처리
 def process_batch(batch, args):
 
-    test, question, tag, correct, mask = batch
+    test, question, tag, correct, Tagrate, answerrate, elapsed, cumAnswerRate,  mask = batch
 
     # change to float
     mask = mask.type(torch.FloatTensor)
@@ -257,11 +257,16 @@ def process_batch(batch, args):
 
     tag = tag.to(args.device)
     correct = correct.to(args.device)
+    Tagrate = Tagrate.to(args.device)
+    answerrate = answerrate.to(args.device)
+    elapsed = elapsed.to(args.device)
+    cumAnswerRate = cumAnswerRate.to(args.device)
+
     mask = mask.to(args.device)
 
     interaction = interaction.to(args.device)
 
-    return (test, question, tag, correct, mask, interaction)
+    return (test, question, tag, correct, Tagrate, answerrate, elapsed, cumAnswerRate, mask, interaction)
 
 
 # loss계산하고 parameter update!
