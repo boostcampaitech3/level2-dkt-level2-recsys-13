@@ -43,9 +43,9 @@ def parse_args(mode="train"):
 
     # 모델
     parser.add_argument(
-        "--hidden_dim", default=256, type=int, help="hidden dimension size"
+        "--hidden_dim", default=1024, type=int, help="hidden dimension size"
     )
-    parser.add_argument("--n_layers", default=4, type=int, help="number of layers")
+    parser.add_argument("--n_layers", default=2, type=int, help="number of layers")
     parser.add_argument("--n_heads", default=4, type=int, help="number of heads")
     parser.add_argument("--drop_out", default=0.1, type=float, help="drop out rate")
 
