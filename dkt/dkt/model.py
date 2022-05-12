@@ -23,10 +23,12 @@ class LSTM(nn.Module):
         self.embedding_test = nn.Embedding(self.args.n_test + 1, 128)
         self.embedding_question = nn.Embedding(self.args.n_questions + 1, 256)
         self.embedding_tag = nn.Embedding(self.args.n_tag + 1, 128)
+        self.embedding_cluster_hour = nn.Embedding(self.args.n_cluster_hour + 1, self.hidden_dim //3)
         self.cate_embedding_dim = self.embedding_interaction.embedding_dim + \
                                     self.embedding_test.embedding_dim + \
                                     self.embedding_question.embedding_dim + \
-                                    self.embedding_tag.embedding_dim
+                                    self.embedding_tag.embedding_dim + \
+                                    self.embedding_cluster_hour.embedding_dim
         self.cate_layer_norm = nn.LayerNorm(self.cate_embedding_dim, eps=1e-12)
 
         # 수치형 Linear 
@@ -55,8 +57,8 @@ class LSTM(nn.Module):
         return (h, c)
 
     def forward(self, input):
+        test, question, tag, _, Tagrate, answerrate, elapsed, cumAnswerRate, cluster_hour, mask, interaction = input
 
-        test, question, tag, _, Tagrate, answerrate, elapsed, cumAnswerRate, mask, interaction = input
 
         batch_size = interaction.size(0)
 
@@ -66,6 +68,7 @@ class LSTM(nn.Module):
         embed_test = self.embedding_test(test)
         embed_question = self.embedding_question(question)
         embed_tag = self.embedding_tag(tag)
+        embed_cluster_hour = self.embedding_cluster_hour(cluster_hour)
 
         Tagrate = Tagrate.unsqueeze(2)
         answerrate = answerrate.unsqueeze(2)
@@ -81,7 +84,7 @@ class LSTM(nn.Module):
                 embed_test,
                 embed_question,
                 embed_tag,
-
+                embed_cluster_hour,
             ],
             2,
         )
@@ -117,10 +120,12 @@ class LSTMATTN(nn.Module):
         self.embedding_test = nn.Embedding(self.args.n_test + 1, 256)
         self.embedding_question = nn.Embedding(self.args.n_questions + 1, 256)
         self.embedding_tag = nn.Embedding(self.args.n_tag + 1, 256)
+        self.embedding_cluster_hour = nn.Embedding(self.args.n_cluster_hour + 1, self.hidden_dim //3)
         self.cate_embedding_dim = self.embedding_interaction.embedding_dim + \
                                     self.embedding_test.embedding_dim + \
                                     self.embedding_question.embedding_dim + \
-                                    self.embedding_tag.embedding_dim
+                                    self.embedding_tag.embedding_dim + \
+                                    self.embedding_cluster_hour.embedding_dim
         self.cate_layer_norm = nn.LayerNorm(self.cate_embedding_dim, eps=1e-12)
 
         # 수치형 Linear 
@@ -162,7 +167,7 @@ class LSTMATTN(nn.Module):
     def forward(self, input):
 
         # test, question, tag, _, mask, interaction, _ = input
-        test, question, tag, _, Tagrate, answerrate, elapsed, cumAnswerRate, mask, interaction = input
+        test, question, tag, _, Tagrate, answerrate, elapsed, cumAnswerRate, cluster_hour, mask, interaction = input
 
         batch_size = interaction.size(0)
 
@@ -171,6 +176,7 @@ class LSTMATTN(nn.Module):
         embed_test = self.embedding_test(test)
         embed_question = self.embedding_question(question)
         embed_tag = self.embedding_tag(tag)
+        embed_cluster_hour = self.embedding_cluster_hour(cluster_hour)
         
         Tagrate = Tagrate.unsqueeze(2)
         answerrate = answerrate.unsqueeze(2)
@@ -186,7 +192,7 @@ class LSTMATTN(nn.Module):
                 embed_test,
                 embed_question,
                 embed_tag,
-
+                embed_cluster_hour,
             ],
             2,
         )
@@ -234,9 +240,10 @@ class Bert(nn.Module):
         )
 
         self.embedding_tag = nn.Embedding(self.args.n_tag + 1, self.hidden_dim // 3)
+        self.embedding_cluster_hour = nn.Embedding(self.args.n_cluster_hour + 1, self.hidden_dim //3)
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4, self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 5, self.hidden_dim)
 
         # Bert config
         self.config = BertConfig(
@@ -258,7 +265,7 @@ class Bert(nn.Module):
 
     def forward(self, input):
         # test, question, tag, _, mask, interaction, _ = input
-        test, question, tag, _, mask, interaction = input
+        test, question, tag,cluster_hour, _, mask, interaction = input
         batch_size = interaction.size(0)
 
         # 신나는 embedding
@@ -269,6 +276,7 @@ class Bert(nn.Module):
         embed_question = self.embedding_question(question)
 
         embed_tag = self.embedding_tag(tag)
+        embed_cluster_hour = self.embedding_cluster_hour(cluster_hour)
 
         embed = torch.cat(
             [
@@ -276,6 +284,7 @@ class Bert(nn.Module):
                 embed_test,
                 embed_question,
                 embed_tag,
+                embed_cluster_hour,
             ],
             2,
         )

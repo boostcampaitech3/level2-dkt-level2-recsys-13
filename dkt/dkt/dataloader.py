@@ -41,7 +41,7 @@ class Preprocess:
         np.save(le_path, encoder.classes_)
 
     def __preprocessing(self, df, is_train=True):
-        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag"]
+        cate_cols = ["assessmentItemID", "testId", "KnowledgeTag", "cluster_hour"]
 
         if not os.path.exists(self.args.asset_dir):
             os.makedirs(self.args.asset_dir)
@@ -78,6 +78,21 @@ class Preprocess:
         return df
 
     def __feature_engineering(self, df):
+        # 아침낮저녁밤새벽
+        def hour_change(x):
+            if 0 <= x < 5:
+                return 'dawn'
+            elif 5 <= x < 9:
+                return 'morning'
+            elif 9 <= x < 17:
+                return 'afternoon'
+            elif 17 <= x < 21:
+                return 'evening'
+            elif 21 <= x:
+                return 'night'
+        df['Timestamp1'] = pd.to_datetime(df['Timestamp'])
+        df['hour'] = df.Timestamp1.dt.hour
+        df['cluster_hour'] = df['hour'].apply(hour_change)
         ##문제별 정답률 추가
         a = {}
         for i, grouped in df.groupby("KnowledgeTag"):
@@ -123,10 +138,15 @@ class Preprocess:
         self.args.n_tag = len(
             np.load(os.path.join(self.args.asset_dir, "KnowledgeTag_classes.npy"))
         )
+        self.args.n_cluster_hour = len(
+            np.load(os.path.join(self.args.asset_dir, "cluster_hour_classes.npy"))
+        )
+
         print('question, test, tag', self.args.n_questions, self.args.n_test, self.args.n_tag)
+
         df = df.sort_values(by=["userID", "Timestamp"], axis=0)
         columns = ["userID", "assessmentItemID", "testId", "answerCode", "KnowledgeTag", "Tagrate", "answerrate", "elapsed"
-        , "cumAnswerRate"]
+        , "cumAnswerRate", "cluster_hour"]
         group = (
             df[columns]
             .groupby("userID")
@@ -140,6 +160,7 @@ class Preprocess:
                     r["answerrate"].values,
                     r["elapsed"].values,
                     r["cumAnswerRate"].values,
+                    r["cluster_hour"].values,
                 )
             )
         )
@@ -164,10 +185,12 @@ class DKTDataset(torch.utils.data.Dataset):
         # 각 data의 sequence length
         seq_len = len(row[0])
 
-        test, question, tag, correct, Tagrate, answerrate, elapsed, cumAnswerRate = \
-            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]
 
-        cate_cols = [test, question, tag, correct, Tagrate, answerrate, elapsed, cumAnswerRate]
+        test, question, tag, correct, Tagrate, answerrate, elapsed, cumAnswerRate, cluster_hour = \
+            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]
+
+        cate_cols = [test, question, tag, correct, Tagrate, answerrate, elapsed, cumAnswerRate, cluster_hour]
+
 
         # max seq len을 고려하여서 이보다 길면 자르고 아닐 경우 그대로 냅둔다
         if seq_len > self.args.max_seq_len:
