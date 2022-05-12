@@ -179,7 +179,7 @@ class LSTMATTN(nn.Module):
                 embed_test,
                 embed_question,
                 embed_tag,
-                embed_cluster_hour
+                embed_cluster_hour,
                 embed_cont,
             ],
             2,
