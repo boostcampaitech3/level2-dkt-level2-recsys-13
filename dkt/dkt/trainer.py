@@ -73,7 +73,7 @@ def run(args, train_data, valid_data, kfold_idx = None):
                 delete_checkpoint(args.model_dir, model_to_save_filename)
             
             # 모델 파일명 세팅
-            model_to_save_filename = f"model"
+            model_to_save_filename = str(args.model)
             if kfold_idx is not None: # kfold
                 model_to_save_filename += f"_kfold{kfold_idx}"
             model_to_save_filename += f"_epoch{epoch + 1}_{best_auc:.2f}.pt"
@@ -181,6 +181,7 @@ def validate(valid_loader, model, args):
 
 
 def inference(args, test_data, model_path=None):
+    args.model = model_path.split("_")[0].split("/")[1]
     model = load_model(args, model_path)
     model.eval()
     _, test_loader = get_loaders(args, None, test_data)
