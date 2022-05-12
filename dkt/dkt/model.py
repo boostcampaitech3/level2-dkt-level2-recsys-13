@@ -25,10 +25,13 @@ class LSTM(nn.Module):
             self.args.n_questions + 1, self.hidden_dim // 3
         )
         self.embedding_tag = nn.Embedding(self.args.n_tag + 1, self.hidden_dim // 3)
+
+        
+        self.linear_cont = nn.Linear(4, self.hidden_dim)
         self.embedding_cluster_hour = nn.Embedding(self.args.n_cluster_hour + 1, self.hidden_dim //3)
 
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 5, self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 5 + self.hidden_dim, self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True, dropout=args.drop_out
@@ -49,8 +52,8 @@ class LSTM(nn.Module):
         return (h, c)
 
     def forward(self, input):
+        test, question, tag, _, Tagrate, answerrate, elapsed, cumAnswerRate, cluster_hour, mask, interaction = input
 
-        test, question, tag, cluster_hour,_, mask, interaction = input
 
         batch_size = interaction.size(0)
 
@@ -62,6 +65,13 @@ class LSTM(nn.Module):
         embed_tag = self.embedding_tag(tag)
         embed_cluster_hour = self.embedding_cluster_hour(cluster_hour)
 
+        Tagrate = Tagrate.unsqueeze(2)
+        answerrate = answerrate.unsqueeze(2)
+        elapsed = elapsed.unsqueeze(2)
+        cumAnswerRate = cumAnswerRate.unsqueeze(2)
+
+        embed_cont = self.linear_cont(torch.cat([Tagrate, answerrate, elapsed, cumAnswerRate], 2))
+
         embed = torch.cat(
             [
                 embed_interaction,
@@ -69,6 +79,7 @@ class LSTM(nn.Module):
                 embed_question,
                 embed_tag,
                 embed_cluster_hour,
+                embed_cont,
             ],
             2,
         )
@@ -106,8 +117,10 @@ class LSTMATTN(nn.Module):
         self.embedding_tag = nn.Embedding(self.args.n_tag + 1, self.hidden_dim // 3)
         self.embedding_cluster_hour = nn.Embedding(self.args.n_cluster_hour + 1, self.hidden_dim //3)
 
+        # 수치형 Linear 
+        self.linear_cont = nn.Linear(4, self.hidden_dim)
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 5, self.hidden_dim)
+        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 5 + self.hidden_dim, self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
@@ -141,7 +154,7 @@ class LSTMATTN(nn.Module):
     def forward(self, input):
 
         # test, question, tag, _, mask, interaction, _ = input
-        test, question, tag,cluster_hour, _, mask, interaction = input
+        test, question, tag, _, Tagrate, answerrate, elapsed, cumAnswerRate, cluster_hour, mask, interaction = input
 
         batch_size = interaction.size(0)
 
@@ -151,6 +164,14 @@ class LSTMATTN(nn.Module):
         embed_question = self.embedding_question(question)
         embed_tag = self.embedding_tag(tag)
         embed_cluster_hour = self.embedding_cluster_hour(cluster_hour)
+        
+        Tagrate = Tagrate.unsqueeze(2)
+        answerrate = answerrate.unsqueeze(2)
+        elapsed = elapsed.unsqueeze(2)
+        cumAnswerRate = cumAnswerRate.unsqueeze(2)
+        
+        embed_cont = self.linear_cont(torch.cat([Tagrate, answerrate, elapsed, cumAnswerRate], 2))
+
 
         embed = torch.cat(
             [
@@ -159,6 +180,7 @@ class LSTMATTN(nn.Module):
                 embed_question,
                 embed_tag,
                 embed_cluster_hour
+                embed_cont,
             ],
             2,
         )

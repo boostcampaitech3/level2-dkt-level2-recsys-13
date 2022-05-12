@@ -73,7 +73,7 @@ class Preprocess:
             )
             return int(timestamp)
 
-        df["Timestamp"] = df["Timestamp"].apply(convert_time)
+        # df["Timestamp"] = df["Timestamp"].apply(convert_time)
 
         return df
 
@@ -93,12 +93,37 @@ class Preprocess:
         df['Timestamp1'] = pd.to_datetime(df['Timestamp'])
         df['hour'] = df.Timestamp1.dt.hour
         df['cluster_hour'] = df['hour'].apply(hour_change)
+        ##문제별 정답률 추가
+        a = {}
+        for i, grouped in df.groupby("KnowledgeTag"):
+            a[i] = sum(grouped.answerCode)/len(grouped)
+        tmp = pd.DataFrame(list(a.items()), columns=["KnowledgeTag","Tagrate"])
+        df = pd.merge(df, tmp, how="inner", on="KnowledgeTag")
 
+        a = {}
+        for i, grouped in df.groupby("assessmentItemID"):
+            a[i] = sum(grouped.answerCode)/len(grouped)
+        tmp = pd.DataFrame(list(a.items()), columns=["assessmentItemID","answerrate"])
+        df = pd.merge(df, tmp, how="inner", on="assessmentItemID")
+
+        diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().fillna(pd.Timedelta(seconds=0))
+        diff = diff.fillna(pd.Timedelta(seconds=0))
+        diff = diff['Timestamp'].apply(lambda x: x.total_seconds())
+        df['elapsed'] = diff
+        df["elapsed"] = df.elapsed.apply(lambda x: 0 if x>1000 else x)
+
+        # 누적합
+        _cumsum = df.loc[:, ['userID', 'answerCode']].groupby('userID').agg({'answerCode': 'cumsum'})
+        # 누적갯수
+        _cumcount = df.loc[:, ['userID', 'answerCode']].groupby('userID').agg({'answerCode': 'cumcount'}) + 1
+
+        df["cumAnswerRate"] = _cumsum / _cumcount
+        # TODO
         return df
 
     def load_data_from_file(self, file_name, is_train=True):
         csv_file_path = os.path.join(self.args.data_dir, file_name)
-        df = pd.read_csv(csv_file_path)  # , nrows=100000)
+        df = pd.read_csv(csv_file_path, parse_dates=["Timestamp"])  # , nrows=100000)
         df = self.__feature_engineering(df)
         df = self.__preprocessing(df, is_train)
 
@@ -118,7 +143,8 @@ class Preprocess:
         )
 
         df = df.sort_values(by=["userID", "Timestamp"], axis=0)
-        columns = ["userID", "assessmentItemID", "testId", "answerCode", "KnowledgeTag", "cluster_hour"]
+        columns = ["userID", "assessmentItemID", "testId", "answerCode", "KnowledgeTag", "Tagrate", "answerrate", "elapsed"
+        , "cumAnswerRate", "cluster_hour"]
         group = (
             df[columns]
             .groupby("userID")
@@ -127,9 +153,12 @@ class Preprocess:
                     r["testId"].values,
                     r["assessmentItemID"].values,
                     r["KnowledgeTag"].values,
-                    r["cluster_hour"].values,
                     r["answerCode"].values,
-                    
+                    r["Tagrate"].values,
+                    r["answerrate"].values,
+                    r["elapsed"].values,
+                    r["cumAnswerRate"].values,
+                    r["cluster_hour"].values,
                 )
             )
         )
@@ -154,9 +183,12 @@ class DKTDataset(torch.utils.data.Dataset):
         # 각 data의 sequence length
         seq_len = len(row[0])
 
-        test, question, tag,cluster_hour, correct  = row[0], row[1], row[2], row[3], row[4]
 
-        cate_cols = [test, question, tag,cluster_hour, correct]
+        test, question, tag, correct, Tagrate, answerrate, elapsed, cumAnswerRate, cluster_hour = \
+            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]
+
+        cate_cols = [test, question, tag, correct, Tagrate, answerrate, elapsed, cumAnswerRate, cluster_hour]
+
 
         # max seq len을 고려하여서 이보다 길면 자르고 아닐 경우 그대로 냅둔다
         if seq_len > self.args.max_seq_len:
