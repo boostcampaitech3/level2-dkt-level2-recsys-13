@@ -142,6 +142,8 @@ class Preprocess:
             np.load(os.path.join(self.args.asset_dir, "cluster_hour_classes.npy"))
         )
 
+        print('question, test, tag', self.args.n_questions, self.args.n_test, self.args.n_tag)
+
         df = df.sort_values(by=["userID", "Timestamp"], axis=0)
         columns = ["userID", "assessmentItemID", "testId", "answerCode", "KnowledgeTag", "Tagrate", "answerrate", "elapsed"
         , "cumAnswerRate", "cluster_hour"]

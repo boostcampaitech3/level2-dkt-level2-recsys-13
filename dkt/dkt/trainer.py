@@ -21,6 +21,7 @@ def run(args, train_data, valid_data, kfold_idx = None):
     gc.collect()
 
     # augmentation
+    print("Data augmentation...")
     augmented_train_data = data_augmentation(train_data, args)
     if len(augmented_train_data) != len(train_data):
         print(f"Data Augmentation applied. Train data {len(train_data)} -> {len(augmented_train_data)}\n")
@@ -110,7 +111,7 @@ def train(train_loader, model, optimizer, scheduler, args):
     for step, batch in enumerate(train_loader):
         input = process_batch(batch, args)
         preds = model(input)
-        targets = input[4]  # correct
+        targets = input[3]  # correct
 
         loss = compute_loss(preds, targets)
         update_params(loss, model, optimizer, scheduler, args)
@@ -152,7 +153,7 @@ def validate(valid_loader, model, args):
         input = process_batch(batch, args)
 
         preds = model(input)
-        targets = input[4]  # correct
+        targets = input[3]  # correct
 
         # predictions
         preds = preds[:, -1]
