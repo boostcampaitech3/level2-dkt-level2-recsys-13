@@ -23,7 +23,7 @@ class LSTM(nn.Module):
         self.embedding_test = nn.Embedding(self.args.n_test + 1, 128)
         self.embedding_question = nn.Embedding(self.args.n_questions + 1, 256)
         self.embedding_tag = nn.Embedding(self.args.n_tag + 1, 128)
-        self.embedding_cluster_hour = nn.Embedding(self.args.n_cluster_hour + 1, self.hidden_dim //3)
+        self.embedding_cluster_hour = nn.Embedding(self.args.n_cluster_hour + 1, 3)
         self.cate_embedding_dim = self.embedding_interaction.embedding_dim + \
                                     self.embedding_test.embedding_dim + \
                                     self.embedding_question.embedding_dim + \
