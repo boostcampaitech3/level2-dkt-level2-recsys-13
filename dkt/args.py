@@ -37,15 +37,15 @@ def parse_args(mode="train"):
     )
 
     parser.add_argument(
-        "--max_seq_len", default=300, type=int, help="max sequence length"
+        "--max_seq_len", default=100, type=int, help="max sequence length"
     )
     parser.add_argument("--num_workers", default=1, type=int, help="number of workers")
 
     # 모델
     parser.add_argument(
-        "--hidden_dim", default=2048, type=int, help="hidden dimension size"
+        "--hidden_dim", default=1024, type=int, help="hidden dimension size"
     )
-    parser.add_argument("--n_layers", default=2, type=int, help="number of layers")
+    parser.add_argument("--n_layers", default=4, type=int, help="number of layers")
     parser.add_argument("--n_heads", default=4, type=int, help="number of heads")
     parser.add_argument("--drop_out", default=0.1, type=float, help="drop out rate")
 
@@ -68,14 +68,14 @@ def parse_args(mode="train"):
     )
 
     ### 중요 ###
-    parser.add_argument("--model", default="lstmattn", type=str, help="model type")
+    parser.add_argument("--model", default="lstm", type=str, help="model type")
     parser.add_argument("--optimizer", default="adamW", type=str, help="optimizer type")
     parser.add_argument(
         "--scheduler", default="plateau", type=str, help="scheduler type"
     )
 
     ### 추가 ###
-    parser.add_argument("--cv", default=False, type=bool, help="cross validation")
+    parser.add_argument("--cv", default=True, type=bool, help="cross validation")
     parser.add_argument("--wandb", default=False, type=bool, help="wandb option")
 
     args = parser.parse_args()
