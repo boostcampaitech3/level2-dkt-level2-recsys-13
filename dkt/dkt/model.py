@@ -19,17 +19,22 @@ class LSTM(nn.Module):
 
         # Embedding
         # interaction은 현재 correct로 구성되어있다. correct(1, 2) + padding(0)
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim // 3)
-        self.embedding_test = nn.Embedding(self.args.n_test + 1, self.hidden_dim // 3)
-        self.embedding_question = nn.Embedding(
-            self.args.n_questions + 1, self.hidden_dim // 3
-        )
-        self.embedding_tag = nn.Embedding(self.args.n_tag + 1, self.hidden_dim // 3)
-        
+        self.embedding_interaction = nn.Embedding(3, 2)
+        self.embedding_test = nn.Embedding(self.args.n_test + 1, 128)
+        self.embedding_question = nn.Embedding(self.args.n_questions + 1, 256)
+        self.embedding_tag = nn.Embedding(self.args.n_tag + 1, 128)
+        self.cate_embedding_dim = self.embedding_interaction.embedding_dim + \
+                                    self.embedding_test.embedding_dim + \
+                                    self.embedding_question.embedding_dim + \
+                                    self.embedding_tag.embedding_dim
+        self.cate_layer_norm = nn.LayerNorm(self.cate_embedding_dim, eps=1e-12)
+
         # 수치형 Linear 
-        self.linear_cont = nn.Linear(4, self.hidden_dim)
+        self.linear_cont = nn.Linear(4, 4)
+        self.cont_layer_norm = nn.LayerNorm(4, eps=1e-12)
+
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4 + self.hidden_dim, self.hidden_dim)
+        self.comb_proj = nn.Linear(self.cate_embedding_dim + 4, self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True, dropout=args.drop_out
@@ -68,17 +73,20 @@ class LSTM(nn.Module):
         cumAnswerRate = cumAnswerRate.unsqueeze(2)
 
         embed_cont = self.linear_cont(torch.cat([Tagrate, answerrate, elapsed, cumAnswerRate], 2))
+        embed_cont_norm = self.cont_layer_norm(embed_cont)
 
-        embed = torch.cat(
+        embed_cate = torch.cat(
             [
                 embed_interaction,
                 embed_test,
                 embed_question,
                 embed_tag,
-                embed_cont,
+
             ],
             2,
         )
+        embed_cate_norm = self.cate_layer_norm(embed_cate)
+        embed = torch.cat([embed_cate_norm, embed_cont_norm], 2)
 
         X = self.comb_proj(embed)
 
@@ -105,17 +113,22 @@ class LSTMATTN(nn.Module):
 
         # Embedding
         # interaction은 현재 correct로 구성되어있다. correct(1, 2) + padding(0)
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim // 3)
-        self.embedding_test = nn.Embedding(self.args.n_test + 1, self.hidden_dim // 3)
-        self.embedding_question = nn.Embedding(
-            self.args.n_questions + 1, self.hidden_dim // 3
-        )
-        self.embedding_tag = nn.Embedding(self.args.n_tag + 1, self.hidden_dim // 3)
+        self.embedding_interaction = nn.Embedding(3, 2)
+        self.embedding_test = nn.Embedding(self.args.n_test + 1, 256)
+        self.embedding_question = nn.Embedding(self.args.n_questions + 1, 256)
+        self.embedding_tag = nn.Embedding(self.args.n_tag + 1, 256)
+        self.cate_embedding_dim = self.embedding_interaction.embedding_dim + \
+                                    self.embedding_test.embedding_dim + \
+                                    self.embedding_question.embedding_dim + \
+                                    self.embedding_tag.embedding_dim
+        self.cate_layer_norm = nn.LayerNorm(self.cate_embedding_dim, eps=1e-12)
 
         # 수치형 Linear 
-        self.linear_cont = nn.Linear(4, self.hidden_dim)
+        self.linear_cont = nn.Linear(4, 4)
+        self.cont_layer_norm = nn.LayerNorm(4, eps=1e-12)
+
         # embedding combination projection
-        self.comb_proj = nn.Linear((self.hidden_dim // 3) * 4 + self.hidden_dim, self.hidden_dim)
+        self.comb_proj = nn.Linear(self.cate_embedding_dim + 4, self.hidden_dim)
 
         self.lstm = nn.LSTM(
             self.hidden_dim, self.hidden_dim, self.n_layers, batch_first=True
@@ -163,19 +176,22 @@ class LSTMATTN(nn.Module):
         answerrate = answerrate.unsqueeze(2)
         elapsed = elapsed.unsqueeze(2)
         cumAnswerRate = cumAnswerRate.unsqueeze(2)
-        
-        embed_cont = self.linear_cont(torch.cat([Tagrate, answerrate, elapsed, cumAnswerRate], 2))
 
-        embed = torch.cat(
+        embed_cont = self.linear_cont(torch.cat([Tagrate, answerrate, elapsed, cumAnswerRate], 2))
+        embed_cont_norm = self.cont_layer_norm(embed_cont)
+
+        embed_cate = torch.cat(
             [
                 embed_interaction,
                 embed_test,
                 embed_question,
                 embed_tag,
-                embed_cont,
+
             ],
             2,
         )
+        embed_cate_norm = self.cate_layer_norm(embed_cate)
+        embed = torch.cat([embed_cate_norm, embed_cont_norm], 2)
 
         X = self.comb_proj(embed)
 

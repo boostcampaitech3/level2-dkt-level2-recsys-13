@@ -20,6 +20,7 @@ def run(args, train_data, valid_data, kfold_idx = None):
     gc.collect()
 
     # augmentation
+    print("Data augmentation...")
     augmented_train_data = data_augmentation(train_data, args)
     if len(augmented_train_data) != len(train_data):
         print(f"Data Augmentation applied. Train data {len(train_data)} -> {len(augmented_train_data)}\n")
